@@ -1,0 +1,42 @@
+-- services
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+-- prompt part location
+local promptPart = workspace:WaitForChild("MapFolder")
+:WaitForChild("Obby_CrystalCaves")
+:WaitForChild("PromptPart")
+
+-- teleport function
+local function teleportToPart(part)
+if part and part.Position then
+LocalPlayer.Character:SetPrimaryPartCFrame(CFrame.new(part.Position))
+end
+end
+
+-- function to simulate key holding on screengui
+local function holdKeyOnGui(keyCode, duration)
+-- simulate key press
+VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
+
+-- wait for the specified duration
+wait(duration)
+
+-- simulate key release
+VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
+end
+
+-- main loop
+while true do
+teleportToPart(promptPart)
+
+-- wait for gui to load
+wait(0)
+
+-- hold 'e' key down for 5 seconds
+holdKeyOnGui(Enum.KeyCode.E, 5)
+
+-- wait for 20 seconds before repeating
+wait(20)
+end
