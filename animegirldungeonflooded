@@ -1,0 +1,70 @@
+_G.toggleAutopilot = true
+
+-- services
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+-- locations
+local partFolder = workspace:WaitForChild("MapFolder"):WaitForChild("Obby_FloodedCaves")
+local button1TouchPart = partFolder:WaitForChild("Button1"):WaitForChild("TouchPart")
+local button2TouchPart = partFolder:WaitForChild("Button2"):WaitForChild("TouchPart")
+local promptPart = partFolder:WaitForChild("PromptPart")  -- Updated name here
+
+-- teleport function
+local function teleportToPart(part)
+    if part and part.Position then
+        LocalPlayer.Character:SetPrimaryPartCFrame(CFrame.new(part.Position + Vector3.new(0, 3, 0)))  -- Adjusting height to ensure landing on the part
+    end
+end
+
+-- function to simulate key holding on screengui
+local function holdKeyOnGui(keyCode, duration)
+    -- simulate key press
+    VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
+
+    -- wait for the specified duration
+    wait(duration)
+
+    -- simulate key release
+    VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
+end
+
+-- keybind listener
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.KeyCode == Enum.KeyCode.L and not gameProcessed then
+        _G.toggleAutopilot = not _G.toggleAutopilot
+        print("Autopilot:", _G.toggleAutopilot and "On" or "Off")
+    end
+end)
+
+-- main loop
+while true do
+    if _G.toggleAutopilot then
+        -- teleport to Button1's TouchPart
+        teleportToPart(button1TouchPart)
+
+        -- wait to ensure we have fully teleported
+        wait(1)
+
+        -- teleport to Button2's TouchPart
+        teleportToPart(button2TouchPart)
+
+        -- wait to ensure we have fully teleported
+        wait(1)
+
+        -- teleport to main PromptPart
+        teleportToPart(promptPart)
+
+        -- wait for gui to load
+        wait(1)
+                -- hold 'e' key down for 5 seconds
+        holdKeyOnGui(Enum.KeyCode.E, 5)
+
+        -- wait for 20 seconds before repeating
+        wait(20)
+    else
+        wait(1) -- check the toggle state every second when it's off
+    end
+end
