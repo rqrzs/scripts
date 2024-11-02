@@ -1,112 +1,138 @@
-local Players, Uis, RService, SGui = game:GetService"Players", game:GetService"UserInputService", game:GetService"RunService", game:GetService"StarterGui"
-local Client, Mouse, Camera, CF, RNew, Vec3, Vec2 = Players.LocalPlayer, Players.LocalPlayer:GetMouse(), workspace.CurrentCamera, CFrame.new, Ray.new, Vector3.new, Vector2.new
-local Aimlock, MousePressed, CanNotify = true, false, false
-local AimlockTarget
-local OldPre
+local player = game.Players.LocalPlayer
+local camera = game.Workspace.CurrentCamera
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local heartbeat = game:GetService("RunService").Heartbeat
 
-getgenv().WorldToViewportPoint = function(P)
-    return Camera:WorldToViewportPoint(P)
-end
-
-getgenv().WorldToScreenPoint = function(P)
-    return Camera.WorldToScreenPoint(Camera, P)
-end
-
-getgenv().GetObscuringObjects = function(T)
-    if T and T:FindFirstChild(getgenv().AimConfig.AimPart) and Client and Client.Character:FindFirstChild("Head") then 
-        local RayPos = workspace:FindPartOnRay(RNew(
-            T[getgenv().AimConfig.AimPart].Position, Client.Character.Head.Position)
-        )
-        if RayPos then return RayPos:IsDescendantOf(T) end
-    end
-end
-
-getgenv().GetNearestTarget = function()
-    local players = {}
-    local PLAYER_HOLD = {}
-    local DISTANCES = {}
-    for i, v in pairs(Players:GetPlayers()) do
-        if v ~= Client then
-            table.insert(players, v)
-        end
-    end
-    for i, v in pairs(players) do
-        if v.Character ~= nil then
-            local AIM = v.Character:FindFirstChild("Head")
-            if getgenv().AimConfig.TeamCheck == true and v.Team ~= Client.Team or getgenv().AimConfig.TeamCheck == false then 
-                local DISTANCE = (v.Character:FindFirstChild("Head").Position - game.Workspace.CurrentCamera.CFrame.p).magnitude
-                local RAY = Ray.new(game.Workspace.CurrentCamera.CFrame.p, (Mouse.Hit.p - game.Workspace.CurrentCamera.CFrame.p).unit * DISTANCE)
-                local HIT, POS = game.Workspace:FindPartOnRay(RAY, game.Workspace)
-                local DIFF = math.floor((POS - AIM.Position).magnitude)
-                PLAYER_HOLD[v.Name .. i] = { dist = DISTANCE, plr = v, diff = DIFF }
-                table.insert(DISTANCES, DIFF)
-            end
-        end
-    end
-    
-    if unpack(DISTANCES) == nil then
-        return nil
-    end
-    
-    local L_DISTANCE = math.floor(math.min(unpack(DISTANCES)))
-    if L_DISTANCE > getgenv().AimConfig.AimRadius then
-        return nil
-    end
-    
-    for i, v in pairs(PLAYER_HOLD) do
-        if v.diff == L_DISTANCE then
-            return v.plr
-        end
+-- Function to calculate target position with prediction
+local function GetTargetPosition(target)
+    if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+        local targetPosition = target.Character.HumanoidRootPart.Position
+        local targetVelocity = target.Character.HumanoidRootPart.Velocity
+        -- Predictive aiming
+        return targetPosition + targetVelocity * getgenv().AimbotSettings.Prediction
     end
     return nil
 end
 
-Mouse.KeyDown:Connect(function(a)
-    if not (Uis:GetFocusedTextBox()) then 
-        if a == getgenv().AimConfig.AimlockKey and AimlockTarget == nil then
-            pcall(function()
-                if MousePressed ~= true then MousePressed = true end 
-                local Target = getgenv().GetNearestTarget()
-                if Target ~= nil then 
-                    AimlockTarget = Target
-                end
-            end)
-        elseif a == getgenv().AimConfig.AimlockKey and AimlockTarget ~= nil then
-            AimlockTarget = nil
-            MousePressed = false
-        end
-    end
-end)
+-- Aimbot Silent Aim Logic
+local function CalculateSilentAimVelocity()
+    local SilentVelocity
+    local SilentTarget = getgenv().AimbotSettings.Target
 
-RService.RenderStepped:Connect(function()
-    local config = getgenv().AimConfig
-    if config.ThirdPerson == true and config.FirstPerson == true then 
-        CanNotify = (Camera.Focus.p - Camera.CFrame.p).Magnitude > 1 or (Camera.Focus.p - Camera.CFrame.p).Magnitude <= 1
-    elseif config.ThirdPerson == true then 
-        CanNotify = (Camera.Focus.p - Camera.CFrame.p).Magnitude > 1
-    elseif config.FirstPerson == true then 
-        CanNotify = (Camera.Focus.p - Camera.CFrame.p).Magnitude <= 1
-    end
-
-    if Aimlock == true and MousePressed == true and AimlockTarget and AimlockTarget.Character and AimlockTarget.Character:FindFirstChild(config.AimPart) then 
-        if config.FirstPerson == true and CanNotify == true then
-            local targetPos = AimlockTarget.Character[config.AimPart].Position
-            local predictedPos = targetPos + (config.PredictMovement and AimlockTarget.Character[config.AimPart].Velocity / config.PredictionVelocity or Vec3())
-            local mainFrame = CF(Camera.CFrame.p, predictedPos)
-            
-            if config.Smoothness == true then
-                Camera.CFrame = Camera.CFrame:Lerp(mainFrame, config.SmoothnessAmount)
+    if getgenv().AimbotSettings.OverrideYAxis == false then
+        SilentVelocity = Vector3.new(SilentVelocity.X, 0, SilentVelocity.Z)
+    else
+        if SilentTarget and SilentTarget.Character then
+            if getgenv().AimbotSettings.OverrideYAxis == false then
+                SilentVelocity = Vector3.new(SilentTarget.Character.HumanoidRootPart.Velocity.X, 0,
+                    SilentTarget.Character.HumanoidRootPart.Velocity.Z)
             else
-                Camera.CFrame = mainFrame
+                SilentVelocity = SilentTarget.Character.HumanoidRootPart.Velocity
             end
         end
     end
     
-    if config.CheckIfJumped == true and AimlockTarget then
-        if AimlockTarget.Character:FindFirstChild("Humanoid").FloorMaterial == Enum.Material.Air then
-            config.AimPart = "UpperTorso"
-        else
-            config.AimPart = config.OldAimPart
+    return SilentVelocity
+end
+
+-- Resolver Logic
+local function Resolver()
+    while true do
+        heartbeat:Wait()
+        if getgenv().AimbotSettings.ResolverEnabled and getgenv().AimbotSettings.Target then
+            local character = getgenv().AimbotSettings.Target.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local lastPosition = character.HumanoidRootPart.Position
+                task.wait()
+                local currentPosition = character.HumanoidRootPart.Position
+                local velocity = (currentPosition - lastPosition) * 0
+                character.HumanoidRootPart.AssemblyLinearVelocity = velocity
+                character.HumanoidRootPart.Velocity = velocity
+            end
         end
+    end
+end
+
+-- Start the resolver in a separate thread
+coroutine.wrap(Resolver)()
+
+-- Function to toggle aimbot and set the target
+local function ToggleAimbot(input)
+    if input.KeyCode == getgenv().AimbotSettings.Keybind then
+        getgenv().AimbotSettings.Enabled = not getgenv().AimbotSettings.Enabled        
+        if getgenv().AimbotSettings.Enabled then
+            getgenv().AimbotSettings.Target = nil -- Reset target when enabling
+        end
+    end
+end
+
+-- Connect the toggle function to UserInputService
+UserInputService.InputBegan:Connect(ToggleAimbot)
+
+-- Main loop
+RunService.RenderStepped:Connect(function()
+    if getgenv().AimbotSettings.Enabled then
+        if not getgenv().AimbotSettings.Target then
+            local mousePosition = UserInputService:GetMouseLocation() -- Get the cursor position on the screen
+            local closestPlayer = nil
+            local closestDistance = math.huge
+
+            -- Find closest enemy to the mouse position
+            for _, enemy in pairs(game.Players:GetPlayers()) do
+                if enemy ~= player and enemy.Character and enemy.Character:FindFirstChild("HumanoidRootPart") then
+                    local enemyPosition = camera:WorldToScreenPoint(enemy.Character.HumanoidRootPart.Position) -- Convert world position to screen space
+                    local distance = (mousePosition - Vector2.new(enemyPosition.X, enemyPosition.Y)).Magnitude -- Calculate distance to mouse
+
+                    if distance < closestDistance then
+                        closestDistance = distance
+                        closestPlayer = enemy
+                    end
+                end
+            end
+
+            getgenv().AimbotSettings.Target = closestPlayer -- Set the aimbot target to the closest player
+        end
+
+        -- Aimbot functionality
+        if getgenv().AimbotSettings.Target then
+            local targetPosition = GetTargetPosition(getgenv().AimbotSettings.Target)
+            if targetPosition then
+                -- Anti-groundshot logic with strength factor
+                local targetY = getgenv().AimbotSettings.Target.Character.HumanoidRootPart.Position.Y
+                local cameraY = camera.CFrame.Position.Y
+                
+                -- Randomize aim slightly for human-like behavior
+                local aimOffsetX = math.random() * getgenv().AimbotSettings.AimOffset - (getgenv().AimbotSettings.AimOffset / 2)
+                local aimOffsetY = math.random() * getgenv().AimbotSettings.AimOffset - (getgenv().AimbotSettings.AimOffset / 2)
+
+                if cameraY < targetY then
+                    local direction = (targetPosition - camera.CFrame.Position).unit
+                    local newCFrame = CFrame.new(camera.CFrame.Position, camera.CFrame.Position + direction)
+                    camera.CFrame = camera.CFrame:Lerp(newCFrame, getgenv().AimbotSettings.Smoothness + math.random() * getgenv().AimbotSettings.InconsistentSmoothnessFactor - (getgenv().AimbotSettings.InconsistentSmoothnessFactor / 2))
+                else
+                    -- Calculate the adjusted height based on anti-groundshot strength
+                    local adjustedHeight = targetY + (getgenv().AimbotSettings.AntiGroundshotStrength * (cameraY - targetY))
+                    local adjustedPosition = Vector3.new(targetPosition.X + aimOffsetX, adjustedHeight, targetPosition.Z + aimOffsetY)
+                    local direction = (adjustedPosition - camera.CFrame.Position).unit
+                    local newCFrame = CFrame.new(camera.CFrame.Position, camera.CFrame.Position + direction)
+                    camera.CFrame = camera.CFrame:Lerp(newCFrame, getgenv().AimbotSettings.Smoothness + math.random() * getgenv().AimbotSettings.InconsistentSmoothnessFactor - (getgenv().AimbotSettings.InconsistentSmoothnessFactor / 2))
+                end
+
+                -- Handle shot delay with inconsistency
+                if tick() - getgenv().AimbotSettings.LastShotTime >= getgenv().AimbotSettings.ShotDelay + (math.random() * getgenv().AimbotSettings.ShotDelay) then
+                    -- Insert shooting logic here, e.g., fire a projectile
+                    -- For example: player:FireWeapon()
+
+                    -- Add fake miss chance
+                    if math.random() < getgenv().AimbotSettings.MissChance then
+                    else
+                        getgenv().AimbotSettings.LastShotTime = tick() -- Update the last shot time
+                    end
+                end
+            end
+        end
+    else
+        getgenv().AimbotSettings.Target = nil -- Reset target when aimbot is disabled
     end
 end)
