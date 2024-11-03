@@ -1,80 +1,7 @@
---[[local rs = game:GetService("RunService")
-local localPlayer = game.Players.LocalPlayer
-local mouse = localPlayer:GetMouse()
-local target;
- 
-function getgun()
- for i,v in pairs(target.Character:GetChildren()) do
-     if v and (v:FindFirstChild('Default') or v:FindFirstChild('Handle') )then
-         return v
-     end
- end
-end
- 
-function get_closet()
- local a = math.huge
- local b;
- 
- 
- 
- for i, v in pairs(game.Players:GetPlayers()) do
-     if v ~= localPlayer and v.Character and v.Character:FindFirstChild("Head") and  v.Character:FindFirstChild("HumanoidRootPart")  then
-         local c = game.Workspace.CurrentCamera:WorldToViewportPoint(v.Character.PrimaryPart.Position)
-         local d = (Vector2.new(mouse.X, mouse.Y) - Vector2.new(c.X, c.Y)).Magnitude
- 
-         if a > d then
-             b = v
-             a = d
-         end
-     end
- end
- 
- return b
-end
- 
- 
-mouse.KeyDown:Connect(function(z)
- if z == _G.toggle_keybind then
-     if _G.enable == false then
-         _G.enable = true
-     elseif _G.enable == true then
-         _G.enable = false 
-     end
- end
-end)
- 
-mouse.KeyDown:Connect(function(z)
- if z == _G.swith_nigga then
-     target = get_closet()
- end
-end)
- 
-local a=Instance.new("Beam")a.Segments=1;a.Width0=0.2;a.Width1=0.2;a.Color=ColorSequence.new(_G.color)a.FaceCamera=true;local b=Instance.new("Attachment")local c=Instance.new("Attachment")a.Attachment0=b;a.Attachment1=c;a.Parent=workspace.Terrain;b.Parent=workspace.Terrain;c.Parent=workspace.Terrain
- 
-task.spawn(function()
- rs.RenderStepped:Connect(function()
- 
- local character = localPlayer.Character
-     if not character then
-     a.Enabled = false
-     return
- end
- 
-if _G.enable  and getgun() and target.Character:FindFirstChild("BodyEffects") and target.Character:FindFirstChild("Head")  then
-     a.Enabled = true
-     b.Position =  target.Character:FindFirstChild("Head").Position
-     c.Position = target.Character.BodyEffects[_G.method].Value ---edit this if some random ass game got some weird ass other name :palingface
- else
-     a.Enabled = false
- end
- 
- end)
-end)]]
-
 local rs = game:GetService("RunService")
 local localPlayer = game.Players.LocalPlayer
 local mouse = localPlayer:GetMouse()
-local target;
+local target
 
 function getgun()
     for i, v in pairs(target.Character:GetChildren()) do
@@ -86,7 +13,7 @@ end
 
 function get_closet()
     local a = math.huge
-    local b;
+    local b
 
     for i, v in pairs(game.Players:GetPlayers()) do
         if v ~= localPlayer and v.Character and v.Character:FindFirstChild("Head") and v.Character:FindFirstChild("HumanoidRootPart") then
@@ -116,26 +43,28 @@ mouse.KeyDown:Connect(function(z)
 end)
 
 local a = Instance.new("Beam")
-a.Segments = 50 -- Increase the segments for smoother appearance
+a.Segments = 1
 a.Width0 = 0.2
 a.Width1 = 0.2
-a.CurveSize0 = 0 -- Optional, set to a positive value for curvature
-a.CurveSize1 = 0 -- Optional, set to a positive value for curvature
 a.FaceCamera = true
 
+local color1 = Color3.fromRGB(25, 25, 25)
+local color2 = Color3.fromRGB(230, 230, 230)
+local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true) -- Loop and reverse
+
+local tween = game:GetService("TweenService"):Create(a, tweenInfo, {Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, color1),
+    ColorSequenceKeypoint.new(0.5, color2),
+    ColorSequenceKeypoint.new(1, color1)
+}})
+
+a.Parent = workspace.Terrain
 local b = Instance.new("Attachment")
 local c = Instance.new("Attachment")
 a.Attachment0 = b
 a.Attachment1 = c
-a.Parent = workspace.Terrain
 b.Parent = workspace.Terrain
 c.Parent = workspace.Terrain
-
-local startColor = Color3.fromRGB(25, 25, 25)
-local endColor = Color3.fromRGB(255, 255, 255)
-local tweenTime = 1 -- Duration of each color tween
-local startTime = tick()
-local forward = true -- Indicates if the tween is going forward or backward
 
 task.spawn(function()
     rs.RenderStepped:Connect(function()
@@ -149,30 +78,12 @@ task.spawn(function()
             a.Enabled = true
             b.Position = target.Character:FindFirstChild("Head").Position
             c.Position = target.Character.BodyEffects[_G.method].Value
-
-            -- Calculate tween progress
-            local elapsed = (tick() - startTime) % tweenTime
-            local alpha = elapsed / tweenTime
-
-            -- Reverse tween direction when it completes
-            if alpha >= 1 then
-                forward = not forward
-                startTime = tick() -- Reset the start time for the next transition
+            if not tween.PlaybackState == Enum.PlaybackState.Playing then
+                tween:Play()
             end
-
-            -- Interpolate between colors based on direction
-            local currentColor
-            if forward then
-                currentColor = startColor:lerp(endColor, alpha)
-            else
-                currentColor = endColor:lerp(startColor, alpha)
-            end
-
-            a.Color = ColorSequence.new(currentColor)
-
         else
             a.Enabled = false
+            tween:Cancel()
         end
     end)
 end)
-
