@@ -116,9 +116,11 @@ mouse.KeyDown:Connect(function(z)
 end)
 
 local a = Instance.new("Beam")
-a.Segments = 1
+a.Segments = 50 -- Increase the segments for smoother appearance
 a.Width0 = 0.2
 a.Width1 = 0.2
+a.CurveSize0 = 0 -- Optional, set to a positive value for curvature
+a.CurveSize1 = 0 -- Optional, set to a positive value for curvature
 a.FaceCamera = true
 
 local b = Instance.new("Attachment")
@@ -131,8 +133,9 @@ c.Parent = workspace.Terrain
 
 local startColor = Color3.fromRGB(25, 25, 25)
 local endColor = Color3.fromRGB(255, 255, 255)
-local tweenTime = 1 -- Duration of color tween
+local tweenTime = 1 -- Duration of each color tween
 local startTime = tick()
+local forward = true -- Indicates if the tween is going forward or backward
 
 task.spawn(function()
     rs.RenderStepped:Connect(function()
@@ -147,10 +150,24 @@ task.spawn(function()
             b.Position = target.Character:FindFirstChild("Head").Position
             c.Position = target.Character.BodyEffects[_G.method].Value
 
-            -- Tween color from startColor to endColor
+            -- Calculate tween progress
             local elapsed = (tick() - startTime) % tweenTime
             local alpha = elapsed / tweenTime
-            local currentColor = startColor:lerp(endColor, alpha)
+
+            -- Reverse tween direction when it completes
+            if alpha >= 1 then
+                forward = not forward
+                startTime = tick() -- Reset the start time for the next transition
+            end
+
+            -- Interpolate between colors based on direction
+            local currentColor
+            if forward then
+                currentColor = startColor:lerp(endColor, alpha)
+            else
+                currentColor = endColor:lerp(startColor, alpha)
+            end
+
             a.Color = ColorSequence.new(currentColor)
 
         else
@@ -158,3 +175,4 @@ task.spawn(function()
         end
     end)
 end)
+
