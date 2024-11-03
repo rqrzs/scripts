@@ -1,8 +1,26 @@
 local rs = game:GetService("RunService")
 local localPlayer = game.Players.LocalPlayer
 local mouse = localPlayer:GetMouse()
-local target;
+local target
 
+local TweenService = game:GetService("TweenService")
+
+-- Create the Beam
+local a = Instance.new("Beam")
+a.Segments = 1
+a.Width0 = 0.2
+a.Width1 = 0.2
+a.FaceCamera = true
+
+local b = Instance.new("Attachment")
+local c = Instance.new("Attachment")
+a.Attachment0 = b
+a.Attachment1 = c
+a.Parent = workspace.Terrain
+b.Parent = workspace.Terrain
+c.Parent = workspace.Terrain
+
+-- Function to get the gun
 function getgun()
     for i, v in pairs(target.Character:GetChildren()) do
         if v and (v:FindFirstChild('Default') or v:FindFirstChild('Handle')) then
@@ -11,9 +29,10 @@ function getgun()
     end
 end
 
+-- Function to get the closest player
 function get_closet()
     local a = math.huge
-    local b;
+    local b
 
     for i, v in pairs(game.Players:GetPlayers()) do
         if v ~= localPlayer and v.Character and v.Character:FindFirstChild("Head") and v.Character:FindFirstChild("HumanoidRootPart") then
@@ -30,6 +49,7 @@ function get_closet()
     return b
 end
 
+-- Keybind handling
 mouse.KeyDown:Connect(function(z)
     if z == _G.toggle_keybind then
         _G.enable = not _G.enable
@@ -42,45 +62,27 @@ mouse.KeyDown:Connect(function(z)
     end
 end)
 
-local a = Instance.new("Beam")
-a.Segments = 1
-a.Width0 = 0.2
-a.Width1 = 0.2
-a.FaceCamera = true
+-- Function to tween the beam color
+local function tweenBeamColor()
+    local tweenInfo = TweenInfo.new(2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, true)
 
--- Initial color setup
-local colors = {
-    Color3.fromRGB(25, 25, 25),
-    Color3.fromRGB(230, 230, 230),
-    Color3.fromRGB(24, 24, 24)
-}
+    local colorSequence = {
+        Color3.fromRGB(25, 25, 25),
+        Color3.fromRGB(230, 230, 230),
+        Color3.fromRGB(24, 24, 24),
+    }
 
-a.Color = ColorSequence.new(colors)
-
-local b = Instance.new("Attachment")
-local c = Instance.new("Attachment")
-a.Attachment0 = b
-a.Attachment1 = c
-a.Parent = workspace.Terrain
-b.Parent = workspace.Terrain
-c.Parent = workspace.Terrain
-
--- Function to loop colors
-local function loopColors()
-    while true do
-        for i = 1, #colors do
-            a.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, colors[i]),
-                ColorSequenceKeypoint.new(1, colors[i % #colors + 1]) -- Loop to the next color
-            })
-
-            wait(1) -- Adjust the wait time to control the speed of the tween
-        end
+    for _, color in ipairs(colorSequence) do
+        local tween = TweenService:Create(a, tweenInfo, {Color = ColorSequence.new(color)})
+        tween:Play()
+        tween.Completed:Wait()
     end
 end
 
-task.spawn(loopColors)
+-- Start color tweening
+task.spawn(tweenBeamColor)
 
+-- Main loop to update beam position
 task.spawn(function()
     rs.RenderStepped:Connect(function()
         local character = localPlayer.Character
@@ -92,7 +94,7 @@ task.spawn(function()
         if _G.enable and getgun() and target.Character:FindFirstChild("BodyEffects") and target.Character:FindFirstChild("Head") then
             a.Enabled = true
             b.Position = target.Character:FindFirstChild("Head").Position
-            c.Position = target.Character.BodyEffects[_G.method].Value
+            c.Position = target.Character.BodyEffects[_G.method].Value -- Edit this if some game has a different name
         else
             a.Enabled = false
         end
