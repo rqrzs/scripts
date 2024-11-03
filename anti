@@ -1,23 +1,18 @@
 _G.PredictionBreaker = false --dont touch
-
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
-
 local player = Players.LocalPlayer
 local screenGui = Instance.new("ScreenGui", player.PlayerGui)
-
 local function createNotification(message)
     local notificationFrame = Instance.new("Frame", screenGui)
     local notificationText = Instance.new("TextLabel", notificationFrame)
-
     notificationFrame.Size = UDim2.new(0, 300, 0, 50)
     notificationFrame.Position = UDim2.new(0.5, -150, 1, -120)
     notificationFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     notificationFrame.BorderSizePixel = 0
     notificationFrame.BackgroundTransparency = 1
-
     notificationText.Size = UDim2.new(1, 0, 1, 0)
     notificationText.TextColor3 = Color3.fromRGB(255, 255, 255)
     notificationText.Font = Enum.Font.SourceSansBold
@@ -25,42 +20,34 @@ local function createNotification(message)
     notificationText.BackgroundTransparency = 1
     notificationText.TextScaled = false
     notificationText.Text = message
-
     local corner = Instance.new("UICorner", notificationFrame)
     corner.CornerRadius = UDim.new(0, 10)
-
     local tweenIn = TweenService:Create(notificationFrame, TweenInfo.new(0.5), {BackgroundTransparency = 0})
     local tweenOut = TweenService:Create(notificationFrame, TweenInfo.new(0.5), {BackgroundTransparency = 1})
-
     tweenIn:Play()
     tweenIn.Completed:Wait()
     wait(0.1)
     tweenOut:Play()
     tweenOut.Completed:Wait()
-
     notificationFrame:Destroy()
 end
-
 RunService.Heartbeat:Connect(function()
     if _G.PredictionBreaker then
         if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local humanoidRootPart = player.Character.HumanoidRootPart
             local currentVelocity = humanoidRootPart.Velocity
-
             humanoidRootPart.Velocity = Vector3.new(27, 0, 46)
             RunService.RenderStepped:Wait()
             humanoidRootPart.Velocity = currentVelocity
         end
     end
 end)
-
 local function togglePredictionBreaker()
     _G.PredictionBreaker = not _G.PredictionBreaker
     local status = _G.PredictionBreaker and "Enabled" or "Disabled"
     print("Prediction Breaker is now " .. status)
     createNotification("AntiLock: " .. status)
 end
-
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if not gameProcessed then
         if input.KeyCode == Enum.KeyCode.X then
