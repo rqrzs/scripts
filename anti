@@ -5,31 +5,31 @@ local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local screenGui = Instance.new("ScreenGui", player.PlayerGui)
-local function createNotification(message)
-    local notificationFrame = Instance.new("Frame", screenGui)
-    local notificationText = Instance.new("TextLabel", notificationFrame)
-    notificationFrame.Size = UDim2.new(0, 300, 0, 50)
-    notificationFrame.Position = UDim2.new(0.5, -150, 1, -120)
-    notificationFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-    notificationFrame.BorderSizePixel = 0
-    notificationFrame.BackgroundTransparency = 1
-    notificationText.Size = UDim2.new(1, 0, 1, 0)
-    notificationText.TextColor3 = Color3.fromRGB(255, 255, 255)
-    notificationText.Font = Enum.Font.SourceSansBold
-    notificationText.TextSize = 25
-    notificationText.BackgroundTransparency = 1
-    notificationText.TextScaled = false
-    notificationText.Text = message
-    local corner = Instance.new("UICorner", notificationFrame)
+local function createRqrz(message)
+    local RqrzFrame = Instance.new("Frame", screenGui)
+    local RqrzText = Instance.new("TextLabel", RqrzFrame)
+    RqrzFrame.Size = UDim2.new(0, 300, 0, 50)
+    RqrzFrame.Position = UDim2.new(0.5, -150, 1, -120)
+    RqrzFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    RqrzFrame.BorderSizePixel = 0
+    RqrzFrame.BackgroundTransparency = 1
+    RqrzText.Size = UDim2.new(1, 0, 1, 0)
+    RqrzText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    RqrzText.Font = Enum.Font.SourceSansBold
+    RqrzText.TextSize = 25
+    RqrzText.BackgroundTransparency = 1
+    RqrzText.TextScaled = false
+    RqrzText.Text = message
+    local corner = Instance.new("UICorner", RqrzFrame)
     corner.CornerRadius = UDim.new(0, 10)
-    local tweenIn = TweenService:Create(notificationFrame, TweenInfo.new(0.5), {BackgroundTransparency = 0})
-    local tweenOut = TweenService:Create(notificationFrame, TweenInfo.new(0.5), {BackgroundTransparency = 1})
+    local tweenIn = TweenService:Create(RqrzFrame, TweenInfo.new(0.5), {BackgroundTransparency = 0})
+    local tweenOut = TweenService:Create(RqrzFrame, TweenInfo.new(0.5), {BackgroundTransparency = 1})
     tweenIn:Play()
     tweenIn.Completed:Wait()
     wait(0.1)
     tweenOut:Play()
     tweenOut.Completed:Wait()
-    notificationFrame:Destroy()
+    RqrzFrame:Destroy()
 end
 RunService.Heartbeat:Connect(function()
     if _G.PredictionBreaker then
@@ -46,7 +46,7 @@ local function togglePredictionBreaker()
     _G.PredictionBreaker = not _G.PredictionBreaker
     local status = _G.PredictionBreaker and "Enabled" or "Disabled"
     print("Prediction Breaker is now " .. status)
-    createNotification("AntiLock: " .. status)
+    createRqrz("AntiLock: " .. status)
 end
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if not gameProcessed then
