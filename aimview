@@ -13,19 +13,6 @@ function getgun()
  end
 end
  
-function sendnotifi(message)
- 
- 
- game.StarterGui:SetCore("SendNotification", {
-     Title =  'BladeWare';
-     Text = message;
-     Icon = 'rbxassetid://13209787743';
-     Duration = "2";
- })
- 
- end
- 
- 
 function get_closet()
  local a = math.huge
  local b;
@@ -52,10 +39,8 @@ mouse.KeyDown:Connect(function(z)
  if z == _G.toggle_keybind then
      if _G.enable == false then
          _G.enable = true
-         sendnotifi("Aim-Viewer Enabled")
      elseif _G.enable == true then
          _G.enable = false 
-         sendnotifi("Aim-Viewer Disabled")
      end
  end
 end)
@@ -63,7 +48,6 @@ end)
 mouse.KeyDown:Connect(function(z)
  if z == _G.swith_nigga then
      target = get_closet()
-     sendnotifi("targeting: "..tostring(target.DisplayName))
  end
 end)
  
@@ -110,23 +94,11 @@ LocalPlayer.CharacterAdded:Connect(function(NewCharacter)
 end)
  
 local RVelocity, YVelocity = nil, 0.1
-function sendnotifi(message)
- 
- 
- game.StarterGui:SetCore("SendNotification", {
-     Title =  'BladeWare';
-     Text = message;
-     Icon = 'rbxassetid://13209787743';
-     Duration = "2";
- })
- end
  
  UIS.InputBegan:Connect(function(input)
      if input.KeyCode == Enum.KeyCode.X then
          if VelocityChanger == false then
-             sendnotifi("Anti-Lock Disabled")
          elseif VelocityChanger == true then
-             sendnotifi("Anti-Lock Enabled")
          end
      end
  end)
