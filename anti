@@ -13,7 +13,7 @@ local function createNotification(message)
     local notificationText = Instance.new("TextLabel", notificationFrame)
 
     notificationFrame.Size = UDim2.new(0, 300, 0, 50)
-    notificationFrame.Position = UDim2.new(0.5, -150, 1, -750)
+    notificationFrame.Position = UDim2.new(0.5, -150, 1, -500)
     notificationFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     notificationFrame.BorderSizePixel = 0
     notificationFrame.BackgroundTransparency = 1
