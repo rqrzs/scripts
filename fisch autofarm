@@ -1,4 +1,20 @@
+local Teleport = {
+    Location = "thedepths", --will print all possible locations if incorrect
+}
 
+local Config = {
+    AutoCast = true,
+    AutoShake = true,
+    AutoReel = true,
+    FreezePosition = true,
+    Keybind = Enum.KeyCode.F,
+}
+
+local Webhook ={
+    Enabled = true,
+    Url = "https://ptb.discord.com/api/webhooks/1318680154083426365/0Gnws3YaQ2L82h_7xeLCFjf2PDrO-JbW_IoCd_3zlIn0XER7d1zKdfeAaz_iObnaB3Pl",
+    Delay = 60,
+}
 
 print("Loading")
 local Players = game:GetService('Players')
@@ -238,8 +254,8 @@ function WebhookManager()
                     Method = 'POST',
                     Headers = { ['Content-Type'] = 'application/json' },
                     Body = game:GetService('HttpService'):JSONEncode({
-                        username = 'Fisch Farming',
-                        avatar_url = '',
+                        username = 'Space Hub | Fisch',
+                        avatar_url = 'https://cdn.discordapp.com/icons/1241045437884923965/6e134ec00e5adf7fc7f82fcabce45e8a.webp?size=4096',
                         embeds = { Embed }
                     }),
                 }
