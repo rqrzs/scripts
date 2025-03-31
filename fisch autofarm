@@ -1,0 +1,255 @@
+
+
+print("Loading")
+local Players = game:GetService('Players')
+local CoreGui = game:GetService('StarterGui')
+local GuiService = game:GetService('GuiService')
+local ReplicatedStorage = game:GetService('ReplicatedStorage')
+local ContextActionService = game:GetService('ContextActionService')
+local VirtualInputManager = game:GetService('VirtualInputManager')
+local UserInputService = game:GetService('UserInputService')
+local RunService = game:GetService("RunService")
+
+local LocalPlayer = Players.LocalPlayer
+
+local Enabled = false
+local Rod = nil
+local Casted = false
+local Progress = false
+local Finished = false
+
+local LoopPosition
+local Keybind = Config.Keybind or Enum.KeyCode.F
+
+local WebhookLog = false
+local WebhookDelay = Webhook.Delay
+
+function ExportValue(arg1, arg2)
+    return tonumber(string.format("%."..(arg2 or 1)..'f', arg1))
+end
+
+_G.Teleport = Teleport
+_G.Config = Config
+_G.Webhook = Webhook
+
+function ShowNotification(String)
+    CoreGui:SetCore('SendNotification', {
+        Title = 'Notification',
+        Text = String,
+        Duration = 1
+    })
+end
+
+function ToggleFarm(Name, State, Input)
+    if State == Enum.UserInputState.Begin then
+        Enabled = not Enabled
+
+        if Enabled then
+            LoopPosition = LocalPlayer.Character.HumanoidRootPart.Position
+        else
+            Finished = false
+            Progress = false
+            GuiService.SelectedObject = nil
+
+            if Rod then
+                Rod.events.reset:FireServer()
+            end
+        end
+
+        ShowNotification("Status: " .. tostring(Enabled))
+    end
+end
+
+LocalPlayer.Character.ChildAdded:Connect(function(Child)
+    if Child:IsA('Tool') and Child.Name:lower():find('rod') then
+        Rod = Child
+    end
+end)
+
+LocalPlayer.Character.ChildRemoved:Connect(function(Child)
+    if Child == Rod then
+        Enabled = false
+        Finished = false
+        Progress = false
+        Rod = nil
+        GuiService.SelectedObject = nil
+    end
+end)
+
+LocalPlayer.PlayerGui.DescendantAdded:Connect(function(Descendant)
+    if Enabled then
+        if Config.AutoReel and Descendant.Name == 'playerbar' and Descendant.Parent.Name == 'bar' then
+            Finished = true
+            Descendant:GetPropertyChangedSignal('Position'):Wait()
+            ReplicatedStorage.events.reelfinished:FireServer(100, true)
+        end
+    end
+end)
+
+LocalPlayer.PlayerGui.DescendantRemoving:Connect(function(Descendant)
+    if Descendant.Name == 'reel' then
+        Finished = false
+        Progress = false
+    end
+end)
+
+task.spawn(function()
+    while true do
+        if Enabled and not Progress and Config.AutoCast then
+            if Rod then
+                Progress = true
+                task.wait(0.5)
+                Rod.events.reset:FireServer()
+                Rod.events.cast:FireServer(math.random(97, 100))
+            end
+        end
+
+        task.wait()
+    end
+end)
+
+task.spawn(function()
+    while true do
+        if Enabled and Config.FreezePosition and LoopPosition then
+            LocalPlayer.Character.HumanoidRootPart.Position = LoopPosition
+        end
+
+        task.wait()
+    end
+end)
+
+local NewRod = LocalPlayer.Character:FindFirstChildWhichIsA('Tool')
+
+if NewRod and NewRod.Name:lower():find('rod') then
+    Rod = NewRod
+end
+
+if not UserInputService.KeyboardEnabled then
+    ContextActionService:BindAction('ToggleFarm', ToggleFarm, false, Config.Keybind, Enum.UserInputType.Touch)
+    ContextActionService:SetTitle('ToggleFarm', 'Toggle Farm')
+    ContextActionService:SetPosition('ToggleFarm', UDim2.new(0.9, -50, 0.9, -150))
+    ShowNotification('Press the onscreen button to enable/disable')
+else
+    ContextActionService:BindAction('ToggleFarm', ToggleFarm, false, Config.Keybind)
+    ShowNotification("Press '" .. Config.Keybind.Name .. "' to enable/disable")
+end
+
+task.spawn(function()
+    while true do
+        wait()
+
+        if Config.AutoShake and Rod and Rod:FindFirstChild("bobber") then
+            local XyzClone = ReplicatedStorage.resources.items.items.GPS.GPS.gpsMain.xyz:Clone()
+            XyzClone.Parent = LocalPlayer.PlayerGui:WaitForChild("hud"):WaitForChild("safezone"):WaitForChild("backpack")
+            XyzClone.Name = "Lure"
+            XyzClone.Text = "<font color='#ff4949'>Lure </font>: 0%"
+
+            local previousLureValue = -1
+
+            repeat
+                pcall(function()
+                    LocalPlayer.PlayerGui:FindFirstChild("shakeui").safezone:FindFirstChild("button").Size = UDim2.new(1001, 0, 1001, 0)
+                    game:GetService("VirtualUser"):Button1Down(Vector2.new(1, 1))
+                    game:GetService("VirtualUser"):Button1Up(Vector2.new(1, 1))
+                end)
+
+                local lureValue = Rod:FindFirstChild("values") and Rod.values.lure.Value
+                if lureValue ~= previousLureValue then
+                    XyzClone.Text = "<font color='#ff4949'>Lure </font>: "..ExportValue(lureValue, 2).."%"
+                    previousLureValue = lureValue
+                end
+
+                RunService.Heartbeat:Wait()
+            until not Rod or Rod.values.bite.Value or not Config.AutoShake
+
+            XyzClone.Text = "<font color='#ff4949'>FISHING!</font>"
+            delay(0, function()
+                XyzClone:Destroy()
+            end)
+        end
+    end
+end)
+
+task.spawn(function()
+    while true do
+        wait()
+
+        if Rod and Rod:FindFirstChild("bobber") then
+	    local values = Rod:WaitForChild("values") -- Ensures "values" exists
+	    local reel = values:WaitForChild("reel") -- Ensures "reel" exists
+
+            local reelValue = reel.Value
+            if reelValue and reelValue > 0 then
+                Rod:WaitForChild("events"):WaitForChild("reel"):FireServer()
+            end
+        end
+    end
+end)
+
+local Location = Teleport.Location
+
+local p = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
+local f = workspace.world.spawns.TpSpots
+local t = f:FindFirstChild(Location)
+
+if t and t:IsA("BasePart") then
+    p:WaitForChild("HumanoidRootPart").CFrame = t.CFrame    
+else
+    warn("Incorrect Location, Please Use One From The List Below:")
+    for _, v in pairs(f:GetChildren()) do
+        print("-[[ " .. v.Name.. " ]]-")
+    end
+end
+
+function WebhookManager()
+    spawn(function()
+        while WebhookLog do
+            task.wait(WebhookDelay)
+            local OSTime = os.time()
+            local playerLocalTime = os.date('*t', OSTime)
+            local formattedLocalTime = string.format('%02d:%02d:%02d',
+                                             playerLocalTime.hour,
+                                             playerLocalTime.min,
+                                             playerLocalTime.sec)
+            
+            local player = game.Players.LocalPlayer
+            local playerUserId = player.UserId
+            local playerProfileUrl = "https://www.roblox.com/users/" .. playerUserId .. "/profile"
+
+            local MoneyPlayer = game:GetService("Players").LocalPlayer.leaderstats["C$"].Value
+            local LvlPlayer = game:GetService("Players").LocalPlayer.leaderstats.Level.Value
+
+            local Embed = {
+                title = 'Fisching Hub by @nimorix',
+                color = 0x8B26BB,
+                fields = {
+                    { name = 'Player Profile', value = playerProfileUrl },
+                    { name = '', value = '', },
+                    { name = 'C$ - Money💸', value = '' .. MoneyPlayer .. '', inline = true },
+                    { name = 'Fishing Level🎣', value = '' .. LvlPlayer .. '', inline = true },
+                    { name = '', value = '', },
+                    { name = 'Current Local Time', value = formattedLocalTime },
+                },
+                timestamp = os.date('!%Y-%m-%dT%H:%M:%SZ', OSTime),
+            }
+            local success, response = pcall(function()
+                return (syn and syn.request or http_request) {
+                    Url = Webhook.Url,
+                    Method = 'POST',
+                    Headers = { ['Content-Type'] = 'application/json' },
+                    Body = game:GetService('HttpService'):JSONEncode({
+                        username = 'Fisch Farming',
+                        avatar_url = '',
+                        embeds = { Embed }
+                    }),
+                }
+            end)
+        end
+    end)
+end
+
+ShowNotification("script by caffy")
+
+if Webhook.Enabled then
+    WebhookManager()
+end
